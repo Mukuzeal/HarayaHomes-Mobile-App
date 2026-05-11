@@ -6,6 +6,7 @@ import 'screens/home_screen.dart';
 import 'screens/landing_screen.dart';
 import 'screens/rider_dashboard_screen.dart';
 import 'services/payment_result_service.dart';
+import 'services/notification_polling_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -109,6 +110,12 @@ class _SplashGateState extends State<_SplashGate> {
   if (userData != null) {
     final user = jsonDecode(userData) as Map<String, dynamic>;
     final role = user['role'] ?? '';
+    final userId = user['id'] as int? ?? 0;
+
+    // Start notification polling service
+    if (userId > 0) {
+      NotificationPollingService().start(userId);
+    }
 
     Navigator.pushReplacement(
       context,

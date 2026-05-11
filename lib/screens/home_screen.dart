@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/notification_polling_service.dart';
 import '../theme.dart';
 import '../widgets/haraya_widgets.dart';
 import 'login_screen.dart';
@@ -10,6 +11,7 @@ import 'seller_orders_screen.dart';
 import 'rider_apply_screen.dart';
 import 'product_detail_screen.dart';
 import 'cart_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -261,6 +263,51 @@ class _HomeScreenState extends State<HomeScreen> {
                         }),
                         const SizedBox(width: 6),
                       ],
+
+                      // Notifications icon with badge
+                      ValueListenableBuilder<int>(
+                        valueListenable: NotificationPollingService().unreadCount,
+                        builder: (context, unreadCount, _) {
+                          return Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => NotificationsScreen(user: widget.user!),
+                                  ),
+                                ),
+                              ),
+                              if (unreadCount > 0)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      '$unreadCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
 
                       // Cart icon with badge
                       if (!_isGuest)

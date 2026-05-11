@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
 import 'order_tracking_screen.dart';
+import 'seller_store_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -158,8 +159,22 @@ class _OrderTile extends StatelessWidget {
             Text(name,
                 maxLines: 2, overflow: TextOverflow.ellipsis,
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-            Text(store,
-                style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SellerStoreScreen(
+                      sellerId: order['store_id'] ?? 0,
+                      sellerName: store,
+                      user: user,
+                    ),
+                  ),
+                );
+              },
+              child: Text(store,
+                  style: GoogleFonts.poppins(fontSize: 11, color: HarayaColors.primary, fontWeight: FontWeight.w500)),
+            ),
             const SizedBox(height: 6),
             Row(children: [
               _Badge(_label(status), _statusColor(status)),

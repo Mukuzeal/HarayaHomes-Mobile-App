@@ -66,7 +66,14 @@
       "Bash(curl -X POST http://localhost:5000/api/buyer/51/addresses -H \"Content-Type: application/json\" -d '{\"label\":\"Home\",\"fullname\":\"Juan Dela Cruz\",\"Phonenumber\":\"09123456789\",\"full_address\":\"123 Sample St, Quezon City, NCR\",\"latitude\":-14.5794,\"longitude\":121.0248}')",
       "Bash(curl -X GET http://localhost:5000/api/buyer/51/addresses)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(curl -s -X GET http://localhost:5000/api/locations/regions)",
+      "Bash(python -m json.tool)",
+      "Bash(curl -v http://localhost:5000/api/locations/regions)",
+      "Bash(curl -s http://localhost:46845)",
+      "PowerShell(Get-Process chrome -ErrorAction SilentlyContinue)",
+      "PowerShell(head -5)",
+      "Bash(flutter run *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\McZeal\\Documents\\GitHub\\HarayaHomes-Final",

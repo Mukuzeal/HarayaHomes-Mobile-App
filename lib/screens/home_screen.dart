@@ -1,13 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../services/notification_polling_service.dart';
 import '../theme.dart';
-import '../widgets/haraya_widgets.dart';
 import 'login_screen.dart';
 import 'seller_apply_screen.dart';
 import 'seller_orders_screen.dart';
+import 'seller_store_screen.dart';
 import 'rider_apply_screen.dart';
 import 'product_detail_screen.dart';
 import 'cart_screen.dart';
@@ -535,8 +534,22 @@ class _HomeScreenState extends State<HomeScreen> {
                               fontWeight: FontWeight.w600)),
                       Text(_formatPrice(p['price']),
                           style: const TextStyle(color: Colors.red)),
-                      Text(p['store_name'] ?? '',
-                          style: const TextStyle(fontSize: 11)),
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SellerStoreScreen(
+                                sellerId: p['store_id'] ?? 0,
+                                sellerName: p['store_name'] ?? '',
+                                user: widget.user,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Text(p['store_name'] ?? '',
+                            style: GoogleFonts.poppins(fontSize: 11, color: HarayaColors.primary, fontWeight: FontWeight.w500)),
+                      ),
                     ],
                   ),
                 )

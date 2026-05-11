@@ -4,7 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
-import '../widgets/haraya_widgets.dart';
 
 class AddressScreen extends StatefulWidget {
   final Map<String, dynamic>? user;
@@ -23,7 +22,6 @@ class _AddressScreenState extends State<AddressScreen> {
 
   List<Map<String, dynamic>> _addresses = [];
   bool _loading = true;
-  int? _selectedAddressId;
 
   @override
   void initState() {
@@ -36,7 +34,6 @@ class _AddressScreenState extends State<AddressScreen> {
       final addresses = await ApiService.getAddresses(_userId);
       setState(() {
         _addresses = addresses.cast<Map<String, dynamic>>();
-        _selectedAddressId = addresses.isNotEmpty ? addresses[0]['address_id'] : null;
         _loading = false;
       });
     } catch (e) {
@@ -269,7 +266,9 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     try {
       final regions = await ApiService.getRegions();
       setState(() {
-        _regions = regions.cast<Map<String, dynamic>>();
+        _regions = List<Map<String, dynamic>>.from(
+          regions.map((e) => e is Map ? Map<String, dynamic>.from(e as Map) : {})
+        );
         _loading = false;
       });
     } catch (e) {
@@ -278,9 +277,12 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     }
   }
 
-  Future<void> _onRegionSelected(Map<String, dynamic> region) async {
+  Future<void> _onRegionSelected(dynamic region) async {
+    final regionMap = region is Map ? Map<String, dynamic>.from(region) : null;
+    if (regionMap == null) return;
+
     setState(() {
-      _selectedRegion = region;
+      _selectedRegion = regionMap;
       _selectedProvince = null;
       _selectedCity = null;
       _selectedBarangay = null;
@@ -290,16 +292,22 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     });
 
     try {
-      final provinces = await ApiService.getProvinces(region['region_id']);
-      setState(() => _provinces = provinces.cast<Map<String, dynamic>>());
+      final regionId = regionMap['region_id'];
+      final provinces = await ApiService.getProvinces(regionId);
+      setState(() => _provinces = List<Map<String, dynamic>>.from(
+        provinces.map((e) => e is Map ? Map<String, dynamic>.from(e) : {})
+      ));
     } catch (e) {
       debugPrint("Failed to load provinces: $e");
     }
   }
 
-  Future<void> _onProvinceSelected(Map<String, dynamic> province) async {
+  Future<void> _onProvinceSelected(dynamic province) async {
+    final provinceMap = province is Map ? Map<String, dynamic>.from(province) : null;
+    if (provinceMap == null) return;
+
     setState(() {
-      _selectedProvince = province;
+      _selectedProvince = provinceMap;
       _selectedCity = null;
       _selectedBarangay = null;
       _cities = [];
@@ -307,20 +315,26 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     });
 
     try {
-      final cities = await ApiService.getCities(province['province_id']);
-      setState(() => _cities = cities.cast<Map<String, dynamic>>());
+      final provinceId = provinceMap['province_id'];
+      final cities = await ApiService.getCities(provinceId);
+      setState(() => _cities = List<Map<String, dynamic>>.from(
+        cities.map((e) => e is Map ? Map<String, dynamic>.from(e) : {})
+      ));
     } catch (e) {
       debugPrint("Failed to load cities: $e");
     }
   }
 
-  Future<void> _onCitySelected(Map<String, dynamic> city) async {
+  Future<void> _onCitySelected(dynamic city) async {
+    final cityMap = city is Map ? Map<String, dynamic>.from(city) : null;
+    if (cityMap == null) return;
+
     setState(() {
-      _selectedCity = city;
+      _selectedCity = cityMap;
       _selectedBarangay = null;
       _barangays = [];
-      _latitude = double.tryParse(city['latitude'].toString()) ?? _latitude;
-      _longitude = double.tryParse(city['longitude'].toString()) ?? _longitude;
+      _latitude = double.tryParse(cityMap['latitude'].toString()) ?? _latitude;
+      _longitude = double.tryParse(cityMap['longitude'].toString()) ?? _longitude;
     });
 
     _mapController?.animateCamera(
@@ -328,18 +342,24 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     );
 
     try {
-      final barangays = await ApiService.getBarangays(city['city_id']);
-      setState(() => _barangays = barangays.cast<Map<String, dynamic>>());
+      final cityId = cityMap['city_id'];
+      final barangays = await ApiService.getBarangays(cityId);
+      setState(() => _barangays = List<Map<String, dynamic>>.from(
+        barangays.map((e) => e is Map ? Map<String, dynamic>.from(e) : {})
+      ));
     } catch (e) {
       debugPrint("Failed to load barangays: $e");
     }
   }
 
-  void _onBarangaySelected(Map<String, dynamic> barangay) {
+  void _onBarangaySelected(dynamic barangay) {
+    final barangayMap = barangay is Map ? Map<String, dynamic>.from(barangay) : null;
+    if (barangayMap == null) return;
+
     setState(() {
-      _selectedBarangay = barangay;
-      _latitude = double.tryParse(barangay['latitude'].toString()) ?? _latitude;
-      _longitude = double.tryParse(barangay['longitude'].toString()) ?? _longitude;
+      _selectedBarangay = barangayMap;
+      _latitude = double.tryParse(barangayMap['latitude'].toString()) ?? _latitude;
+      _longitude = double.tryParse(barangayMap['longitude'].toString()) ?? _longitude;
     });
 
     _mapController?.animateCamera(

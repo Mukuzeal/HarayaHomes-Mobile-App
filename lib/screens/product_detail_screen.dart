@@ -8,6 +8,7 @@ import '../services/payment_result_service.dart';
 import '../theme.dart';
 import 'cart_screen.dart';
 import 'orders_screen.dart';
+import 'seller_store_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final dynamic product;
@@ -317,34 +318,47 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 color: HarayaColors.textDark, height: 1.3)),
 
                         const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: HarayaColors.sectionBg,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(children: [
-                            Container(
-                              width: 38, height: 38,
-                              decoration: BoxDecoration(
-                                color: HarayaColors.primary.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
+                        InkWell(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SellerStoreScreen(
+                                sellerId: widget.product['store_id'] ?? 0,
+                                sellerName: _seller,
+                                user: widget.user,
                               ),
-                              child: const Icon(Icons.storefront_rounded,
-                                  color: HarayaColors.primary, size: 20),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('Sold by',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 10, color: const Color(0xFF888888))),
-                              Text(_seller,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 13, fontWeight: FontWeight.w600,
-                                      color: HarayaColors.textDark)),
-                            ])),
-                            const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
-                          ]),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: HarayaColors.sectionBg,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(children: [
+                              Container(
+                                width: 38, height: 38,
+                                decoration: BoxDecoration(
+                                  color: HarayaColors.primary.withValues(alpha: 0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.storefront_rounded,
+                                    color: HarayaColors.primary, size: 20),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Text('Sold by',
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 10, color: const Color(0xFF888888))),
+                                Text(_seller,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 13, fontWeight: FontWeight.w600,
+                                        color: HarayaColors.textDark)),
+                              ])),
+                              const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 20),
+                            ]),
+                          ),
                         ),
 
                         const SizedBox(height: 16),

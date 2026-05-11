@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/haraya_widgets.dart';
 import 'signup_screen.dart';
 import 'home_screen.dart';
+import 'rider_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -81,10 +82,13 @@ class _LoginScreenState extends State<LoginScreen>
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_data', jsonEncode(userData));
 
+        final role = userData['role'] ?? '';
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => HomeScreen(user: userData),
+            builder: (_) => role == 'rider'
+                ? RiderDashboardScreen(user: userData)
+                : HomeScreen(user: userData),
           ),
           (route) => false,
         );

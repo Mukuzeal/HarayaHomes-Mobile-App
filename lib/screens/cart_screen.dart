@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../services/api_service.dart';
+import '../services/payment_service.dart';
 import '../services/payment_result_service.dart';
 import '../theme.dart';
 import 'login_screen.dart';
 import 'orders_screen.dart';
+import 'address_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -24,6 +25,7 @@ class _CartScreenState extends State<CartScreen> {
   bool _paying          = false;
   final Set<int> _selected = {};
   String? _currentSessionId;
+  Map<String, dynamic>? _selectedAddress;
 
   @override
   void initState() {
@@ -81,6 +83,11 @@ class _CartScreenState extends State<CartScreen> {
       _snack('Select at least one item.', isError: true);
       return;
     }
+    if (_selectedAddress == null) {
+      _snack('Please select a delivery address.', isError: true);
+      _selectAddress();
+      return;
+    }
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -92,8 +99,20 @@ class _CartScreenState extends State<CartScreen> {
         userId: _userId,
         user: widget.user,
         showSnack: _snack,
+        selectedAddress: _selectedAddress,
       ),
     );
+  }
+
+  Future<void> _selectAddress() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (_) => AddressScreen(user: widget.user)),
+    );
+    if (result != null) {
+      setState(() => _selectedAddress = result);
+      _snack('Address selected: ${result['label']}');
+    }
   }
 
   Future<void> _pay(String paymentType) async {
@@ -109,15 +128,28 @@ class _CartScreenState extends State<CartScreen> {
       if (result['success'] == true) {
         final sessionId = result['session_id'] as String;
         setState(() => _currentSessionId = sessionId);
-        
+
         // Save pending payment info for app resume handling
         await PaymentResultService.savePendingPayment(
           sessionId: sessionId,
           userId: _userId,
         );
-        
+
         final url = result['checkout_url'] as String;
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        final paymentResult = await PaymentService.showPaymentUI(
+          context,
+          checkoutUrl: url,
+          sessionId: sessionId,
+        );
+
+        if (!mounted) return;
+        if (paymentResult?.success == true) {
+          _snack('Payment successful! Your order has been placed.', isError: false);
+          await _load();
+          setState(() => _selected.clear());
+        } else if (paymentResult?.success == false) {
+          _snack(paymentResult?.error ?? 'Payment was cancelled.', isError: true);
+        }
       } else {
         _snack(result['message'] ?? 'Payment failed.', isError: true);
       }
@@ -217,6 +249,58 @@ class _CartScreenState extends State<CartScreen> {
           Text('₱${_total.toStringAsFixed(2)}',
               style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: HarayaColors.error)),
         ]),
+        const SizedBox(height: 14),
+        InkWell(
+          onTap: _selectAddress,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _selectedAddress == null ? Colors.orange.shade50 : Colors.green.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _selectedAddress == null ? Colors.orange.shade200 : Colors.green.shade200,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _selectedAddress == null ? Icons.location_off : Icons.location_on,
+                  color: _selectedAddress == null ? Colors.orange : Colors.green,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _selectedAddress == null ? 'No address selected' : 'Deliver to',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: _selectedAddress == null ? Colors.orange : Colors.green,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (_selectedAddress != null)
+                        Text(
+                          _selectedAddress!['label'] ?? '',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: _selectedAddress == null ? Colors.orange : Colors.green,
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 14),
         SizedBox(
           width: double.infinity,
@@ -344,14 +428,16 @@ class _PaymentSheet extends StatelessWidget {
   final int userId;
   final Map<String, dynamic> user;
   final void Function(String, {bool isError}) showSnack;
-  
+  final Map<String, dynamic>? selectedAddress;
+
   const _PaymentSheet({
-    required this.total, 
-    required this.onPay, 
+    required this.total,
+    required this.onPay,
     this.sessionId,
     required this.userId,
     required this.user,
     required this.showSnack,
+    this.selectedAddress,
   });
 
   @override
@@ -363,6 +449,37 @@ class _PaymentSheet extends StatelessWidget {
             style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
         Text('Total: ₱${total.toStringAsFixed(2)}',
             style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey)),
+        if (selectedAddress != null) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.blue.shade600, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(selectedAddress!['label'] ?? 'Address',
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue.shade900)),
+                      Text(selectedAddress!['full_address'] ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(fontSize: 10, color: Colors.blue.shade700)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 20),
         _MethodTile(
           icon: '💳', label: 'Credit / Debit Card',
@@ -377,9 +494,9 @@ class _PaymentSheet extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _MethodTile(
-          icon: '💙', label: 'Maya',
-          sub: 'Pay via Maya (formerly PayMaya)',
-          onTap: () => onPay('paymaya'),
+          icon: '🔲', label: 'QRPH',
+          sub: 'Scan any PH bank QR code',
+          onTap: () => onPay('qrph'),
         ),
         
         // Simulation buttons for testing

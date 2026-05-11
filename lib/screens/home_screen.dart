@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../widgets/haraya_widgets.dart';
 import 'login_screen.dart';
 import 'seller_apply_screen.dart';
+import 'seller_orders_screen.dart';
 import 'rider_apply_screen.dart';
 import 'product_detail_screen.dart';
 import 'cart_screen.dart';
@@ -36,6 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _searchQuery = '';
   String _selectedCategory = 'All';
+  String _sortBy = 'popularity'; // popularity, price_low, price_high, newest, rating
 
   final TextEditingController _searchCtrl = TextEditingController();
 
@@ -90,10 +92,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ───────────────────────────────────────── FILTER ─────────────────────────────────────────
+  // ───────────────────────────────────────── FILTER & SORT ─────────────────────────────────────────
   void _applyFilters() {
     List<dynamic> result = List.from(_allProducts);
 
+    // Category filter
     if (_selectedCategory != 'All') {
       result = result.where((p) {
         final cat = (p['category'] ?? '').toString().toLowerCase();
@@ -101,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList();
     }
 
+    // Search filter
     if (_searchQuery.isNotEmpty) {
       result = result.where((p) {
         final name = (p['product_name'] ?? '').toString().toLowerCase();
@@ -109,7 +113,49 @@ class _HomeScreenState extends State<HomeScreen> {
       }).toList();
     }
 
+    // Apply sorting
+    _applySorting(result);
     setState(() => _filtered = result);
+  }
+
+  void _applySorting(List<dynamic> products) {
+    switch (_sortBy) {
+      case 'price_low':
+        products.sort((a, b) {
+          final priceA = double.tryParse(a['price'].toString()) ?? 0.0;
+          final priceB = double.tryParse(b['price'].toString()) ?? 0.0;
+          return priceA.compareTo(priceB);
+        });
+        break;
+      case 'price_high':
+        products.sort((a, b) {
+          final priceA = double.tryParse(a['price'].toString()) ?? 0.0;
+          final priceB = double.tryParse(b['price'].toString()) ?? 0.0;
+          return priceB.compareTo(priceA);
+        });
+        break;
+      case 'rating':
+        products.sort((a, b) {
+          final ratingA = double.tryParse(a['average_rating'].toString()) ?? 0.0;
+          final ratingB = double.tryParse(b['average_rating'].toString()) ?? 0.0;
+          return ratingB.compareTo(ratingA);
+        });
+        break;
+      case 'newest':
+        products.sort((a, b) {
+          final idA = (a['Product_id'] as int?) ?? 0;
+          final idB = (b['Product_id'] as int?) ?? 0;
+          return idB.compareTo(idA);
+        });
+        break;
+      case 'popularity':
+      default:
+        products.sort((a, b) {
+          final reviewsA = (a['total_reviews'] as int?) ?? 0;
+          final reviewsB = (b['total_reviews'] as int?) ?? 0;
+          return reviewsB.compareTo(reviewsA);
+        });
+    }
   }
 
   // ───────────────────────────────────────── IMAGE FIX (IMPORTANT) ─────────────────────────────────────────
@@ -148,9 +194,14 @@ class _HomeScreenState extends State<HomeScreen> {
           color: HarayaColors.primary,
           child: _loadingProducts
               ? _buildSkeleton()
-              : _filtered.isEmpty
-                  ? _buildEmpty()
-                  : _buildGrid(),
+              : Column(
+                  children: [
+                    _buildFilterBar(),
+                    Expanded(
+                      child: _filtered.isEmpty ? _buildEmpty() : _buildGrid(),
+                    ),
+                  ],
+                ),
         ),
       ),
     );
@@ -191,18 +242,25 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const Spacer(),
 
-                      _topBtn(Icons.storefront, "Sell", () {
-                        Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => SellerApplyScreen(userEmail: _email)));
-                      }),
-
-                      const SizedBox(width: 6),
-
-                      _topBtn(Icons.delivery_dining, "Ride", () {
-                        Navigator.push(context,
-                            MaterialPageRoute(builder: (_) => RiderApplyScreen(userEmail: _email)));
-                      }),
-                      const SizedBox(width: 6),
+                      if (_role == 'seller') ...[
+                        _topBtn(Icons.pending_actions_rounded, "Approvals", () {
+                          Navigator.push(context,
+                              MaterialPageRoute(
+                                  builder: (_) => SellerOrdersScreen(user: widget.user!)));
+                        }),
+                        const SizedBox(width: 6),
+                      ] else ...[
+                        _topBtn(Icons.storefront, "Sell", () {
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => SellerApplyScreen(userEmail: _email)));
+                        }),
+                        const SizedBox(width: 6),
+                        _topBtn(Icons.delivery_dining, "Ride", () {
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (_) => RiderApplyScreen(userEmail: _email)));
+                        }),
+                        const SizedBox(width: 6),
+                      ],
 
                       // Cart icon with badge
                       if (!_isGuest)
@@ -303,6 +361,75 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(color: Colors.white, fontSize: 11)),
           ],
         ),
+      ),
+    );
+  }
+
+  // ───────────────────────────────────────── FILTER BAR ─────────────────────────────────────────
+  Widget _buildFilterBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Category chips
+          SizedBox(
+            height: 40,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(_categories.length, (i) {
+                  final cat = _categories[i];
+                  final label = _categoryLabels[i];
+                  final isSelected = _selectedCategory == cat;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: FilterChip(
+                      label: Text(label,
+                          style: TextStyle(
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected ? Colors.white : Colors.black87)),
+                      backgroundColor: isSelected ? HarayaColors.primary : Colors.grey[200],
+                      onSelected: (_) {
+                        setState(() => _selectedCategory = cat);
+                        _applyFilters();
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Sort dropdown
+          Row(
+            children: [
+              const Icon(Icons.sort, size: 20, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButton<String>(
+                  value: _sortBy,
+                  isExpanded: true,
+                  underline: Container(),
+                  items: const [
+                    DropdownMenuItem(value: 'popularity', child: Text('Most Popular')),
+                    DropdownMenuItem(value: 'newest', child: Text('Newest')),
+                    DropdownMenuItem(value: 'price_low', child: Text('Price: Low to High')),
+                    DropdownMenuItem(value: 'price_high', child: Text('Price: High to Low')),
+                    DropdownMenuItem(value: 'rating', child: Text('Highest Rating')),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _sortBy = value);
+                      _applyFilters();
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

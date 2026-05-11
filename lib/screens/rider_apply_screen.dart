@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
 import '../widgets/haraya_widgets.dart';
@@ -129,7 +131,12 @@ class _RiderApplyScreenState extends State<RiderApplyScreen> {
 
     setState(() => _loading = true);
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final rawUser = prefs.getString('user_data');
+      final userId = rawUser != null ? (jsonDecode(rawUser)['id'] as int? ?? 0) : 0;
+
       final result = await ApiService.submitRiderApplication(
+        userId: userId,
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         birthday: _birthdayCtrl.text.trim(),

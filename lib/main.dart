@@ -2,8 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'theme.dart';
-import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/landing_screen.dart';
+import 'screens/rider_dashboard_screen.dart';
 import 'services/payment_result_service.dart';
 
 void main() async {
@@ -107,26 +108,20 @@ class _SplashGateState extends State<_SplashGate> {
 
   if (userData != null) {
     final user = jsonDecode(userData) as Map<String, dynamic>;
+    final role = user['role'] ?? '';
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => HomeScreen(user: user),
+        builder: (_) => role == 'rider'
+            ? RiderDashboardScreen(user: user)
+            : HomeScreen(user: user),
       ),
     );
   } else {
-    // 👇 GUEST MODE (NO LOGIN REQUIRED)
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => const HomeScreen(
-          user: {
-            "fname": "Guest",
-            "role": "guest",
-            "email": "",
-          },
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => const LandingScreen()),
     );
   }
 }

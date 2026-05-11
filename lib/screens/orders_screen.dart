@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/api_service.dart';
 import '../theme.dart';
+import 'order_tracking_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -66,6 +67,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     itemBuilder: (_, i) => _OrderTile(
                       order:  _orders[i],
                       imgUrl: _img(_orders[i]),
+                      user: widget.user,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OrderTrackingScreen(
+                            orderId: _orders[i]['order_id'] as int,
+                            user: widget.user,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -84,8 +95,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
 class _OrderTile extends StatelessWidget {
   final dynamic order;
-  final String  imgUrl;
-  const _OrderTile({required this.order, required this.imgUrl});
+  final String imgUrl;
+  final Map<String, dynamic> user;
+  final VoidCallback onTap;
+  const _OrderTile({
+    required this.order,
+    required this.imgUrl,
+    required this.user,
+    required this.onTap,
+  });
 
   static const _statusColors = {
     'pending':    Color(0xFFF57C00),
@@ -120,12 +138,14 @@ class _OrderTile extends StatelessWidget {
     final qty     = order['quantity']     ?? 1;
     final date    = (order['order_date']  ?? '').toString().substring(0, 10);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: imgUrl.isNotEmpty
@@ -156,6 +176,7 @@ class _OrderTile extends StatelessWidget {
             ]),
           ])),
         ]),
+      ),
       ),
     );
   }

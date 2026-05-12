@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.123.82:5000';
+  static const String baseUrl = 'https://haraya-homes-api.onrender.com';
 
   static void _log(String tag, String msg) {
     if (kDebugMode) print('🔵 [Haraya/$tag] $msg');

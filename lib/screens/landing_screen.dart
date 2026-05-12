@@ -60,16 +60,21 @@ class _LandingScreenState extends State<LandingScreen> {
       backgroundColor: HarayaColors.headerBg,
       elevation: 2,
       automaticallyImplyLeading: false,
-      title: Row(
-        children: [
-          const Icon(Icons.home_rounded, color: HarayaColors.primary, size: 24),
-          const SizedBox(width: 6),
-          Text('HarayaHomes',
-              style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: HarayaColors.primary)),
-        ],
+      title: Flexible(
+        child: Row(
+          children: [
+            const Icon(Icons.home_rounded, color: HarayaColors.primary, size: 24),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text('HarayaHomes',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: HarayaColors.primary)),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
@@ -163,16 +164,26 @@ class _HomeScreenState extends State<HomeScreen> {
   String _getImage(dynamic product) {
     try {
       final raw = product['image_url'];
+      String path = '';
 
       if (raw is List && raw.isNotEmpty) {
-        String path = raw[0].toString();
-
-        if (!path.startsWith('http')) {
-          path = "${ApiService.baseUrl}$path";
+        path = raw[0].toString().trim();
+      } else if (raw is String && raw.isNotEmpty) {
+        final str = raw.trim();
+        if (str.startsWith('[')) {
+          // JSON array stored as text — parse it
+          final decoded = json.decode(str);
+          if (decoded is List && decoded.isNotEmpty) {
+            path = decoded[0].toString().trim();
+          }
+        } else {
+          path = str;
         }
-
-        return path;
       }
+
+      if (path.isEmpty) return '';
+      if (path.startsWith('http://') || path.startsWith('https://')) return path;
+      return '${ApiService.baseUrl}/$path';
     } catch (_) {}
 
     return '';

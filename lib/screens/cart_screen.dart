@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -51,12 +52,24 @@ class _CartScreenState extends State<CartScreen> {
   double get _total    => _subtotal + _shipping;
 
   String _img(dynamic item) {
-    final raw = item['image_url'];
-    if (raw is List && raw.isNotEmpty) {
-      String p = raw[0].toString();
-      if (!p.startsWith('http')) p = '${ApiService.baseUrl}$p';
-      return p;
-    }
+    try {
+      final raw = item['image_url'];
+      String p = '';
+      if (raw is List && raw.isNotEmpty) {
+        p = raw[0].toString().trim();
+      } else if (raw is String && raw.isNotEmpty) {
+        final str = raw.trim();
+        if (str.startsWith('[')) {
+          final decoded = json.decode(str);
+          if (decoded is List && decoded.isNotEmpty) p = decoded[0].toString().trim();
+        } else {
+          p = str;
+        }
+      }
+      if (p.isEmpty) return '';
+      if (p.startsWith('http://') || p.startsWith('https://')) return p;
+      return '${ApiService.baseUrl}/$p';
+    } catch (_) {}
     return '';
   }
 

@@ -46,7 +46,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       else if (raw is List) imgs = raw;
       return imgs.map((e) {
         String url = e.toString();
-        if (!url.startsWith('http')) url = '${ApiService.baseUrl}$url';
+        if (!url.startsWith('http')) url = '${ApiService.baseUrl}/$url';
         return url;
       }).toList();
     } catch (_) {

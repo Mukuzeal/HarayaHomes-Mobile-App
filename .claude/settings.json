@@ -73,14 +73,28 @@
       "Bash(curl -s http://localhost:46845)",
       "PowerShell(Get-Process chrome -ErrorAction SilentlyContinue)",
       "PowerShell(head -5)",
-      "Bash(flutter run *)"
+      "Bash(flutter run *)",
+      "Bash(python)",
+      "Bash(git push *)",
+      "Bash(python -c \"import app; print\\('Flask app imports successfully'\\)\")",
+      "Bash(xargs -I {} grep -A5 \"def register\\(app\\):\" {})",
+      "Bash(python -c \"from routes import flutter; print\\('flutter imports OK'\\)\")",
+      "Bash(timeout 5 python app.py)",
+      "Bash(python -m py_compile app.py database.py config.py extensions.py utils.py routes/*.py)",
+      "Bash(python -c \"from app import app; print\\('app imported successfully'\\); print\\(type\\(app\\)\\)\")",
+      "Bash(python -c \"from werkzeug.security import generate_password_hash; print\\(generate_password_hash\\('Admin@Haraya2024'\\)\\)\")",
+      "Bash(xargs grep -l \"baseUrl\\\\|localhost.*5000\")",
+      "Bash(python download_product_images.py)",
+      "Bash(grep -rn 'baseUrl}$path\\\\|baseUrl}$img\\\\|baseUrl}image\\\\|baseUrl}static' C:/Users/McZeal/Documents/GitHub/HarayaHomes-Mobile-App/lib/)",
+      "Bash(rm -f 'C:/Users/McZeal/Documents/GitHub/HarayaHomes-Final/static/uploads/products/'*.jpg && echo \"Cleared old images\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\McZeal\\Documents\\GitHub\\HarayaHomes-Final",
       "\\dev",
       "C:\\laragon\\data\\mysql-8.4\\#innodb_redo",
       "C:\\laragon\\data\\mysql-8.4-temp",
-      "C:\\laragon\\data\\mysql-8.4"
+      "C:\\laragon\\data\\mysql-8.4",
+      "C:\\Users\\McZeal\\Documents\\GitHub\\HarayaHomes-Final\\static\\uploads\\products"
     ]
   }
 }

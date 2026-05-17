@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import '../services/api_service.dart';
 import '../theme.dart';
+import '../utils/app_animations.dart';
 import '../widgets/haraya_widgets.dart';
 import 'landing_screen.dart';
 
@@ -96,35 +97,91 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
     final res = await ApiService.riderTakeDelivery(_userId, orderId);
     if (!mounted) return;
     if (res['success'] == true) {
-      showHarayaSnackBar(context, 'Delivery accepted!');
+      showHarayaSnackBar(context, 'Delivery accepted!',
+          icon: Icons.local_shipping_rounded);
       _loadActive(); _loadAvailable(); _loadStats();
     } else {
-      showHarayaSnackBar(context, res['message'] ?? 'Failed to take delivery.', isError: true);
+      showHarayaSnackBar(context, res['message'] ?? 'Failed to take delivery.',
+          isError: true);
     }
   }
 
   Future<void> _markDelivered(int orderId) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Mark as Delivered?',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-        content: Text('Confirm that order #$orderId has been delivered.',
-            style: GoogleFonts.poppins(fontSize: 13)),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirm')),
-        ],
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(HarayaRadius.xl)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: HarayaColors.success.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_outline_rounded,
+                    color: HarayaColors.success, size: 32),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Mark as Delivered?',
+                style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: HarayaColors.textDark),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Confirm that order #$orderId has been successfully delivered.',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: HarayaColors.textMuted, height: 1.5),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(_, false),
+                      style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12)),
+                      child: Text('Cancel',
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(_, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: HarayaColors.success,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      child: Text('Confirm',
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
     if (confirmed != true || !mounted) return;
     final res = await ApiService.riderMarkDelivered(_userId, orderId);
     if (!mounted) return;
     if (res['success'] == true) {
-      showHarayaSnackBar(context, 'Order marked as delivered!');
+      showHarayaSnackBar(context, 'Order marked as delivered!',
+          icon: Icons.task_alt_rounded);
       _loadActive(); _loadHistory(); _loadStats();
     } else {
       showHarayaSnackBar(context, res['message'] ?? 'Failed.', isError: true);
@@ -143,7 +200,7 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HarayaColors.background,
+      backgroundColor: HarayaColors.sectionBg,
       body: NestedScrollView(
         headerSliverBuilder: (_, __) => [_buildHeader()],
         body: Column(
@@ -173,11 +230,12 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
       pinned: true,
       automaticallyImplyLeading: false,
       backgroundColor: HarayaColors.primary,
+      elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF3A6A9F), HarayaColors.primary],
+              colors: [HarayaColors.primaryDark, HarayaColors.primary],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -204,19 +262,25 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Haraya Haul',
-                                style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700)),
-                            Text('Hi, $_fname 👋',
-                                style: GoogleFonts.poppins(
-                                    color: Colors.white70, fontSize: 12)),
+                            Text(
+                              'Haraya Haul',
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                            Text(
+                              'Hi, $_fname',
+                              style: GoogleFonts.poppins(
+                                  color: Colors.white.withValues(alpha: 0.75),
+                                  fontSize: 12),
+                            ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.logout, color: Colors.white),
+                        icon: const Icon(Icons.logout_rounded,
+                            color: Colors.white, size: 22),
                         tooltip: 'Log out',
                         onPressed: _logout,
                       ),
@@ -225,11 +289,21 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.circle, color: Color(0xFF4CAF50), size: 10),
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF4CAF50),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                       const SizedBox(width: 6),
-                      Text('Online · Ready for deliveries',
-                          style: GoogleFonts.poppins(
-                              color: Colors.white70, fontSize: 11)),
+                      Text(
+                        'Online · Ready for deliveries',
+                        style: GoogleFonts.poppins(
+                            color: Colors.white.withValues(alpha: 0.75),
+                            fontSize: 11),
+                      ),
                     ],
                   ),
                 ],
@@ -243,31 +317,73 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
 
   // ── Stats row ──────────────────────────────────────────────────────────────
   Widget _buildStatsRow() {
-    if (_loadingStats) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 16),
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
-    final items = [
-      (_stats['deliveries_today']?.toString() ?? '0', 'Today',
-       Icons.local_shipping_rounded, HarayaColors.primary),
-      (_stats['pending']?.toString() ?? '0', 'Active',
-       Icons.pending_actions_rounded, const Color(0xFFE65100)),
-      (_stats['completed']?.toString() ?? '0', 'Done',
-       Icons.check_circle_rounded, const Color(0xFF388E3C)),
-      ('₱${((_stats['earnings_today'] as num?) ?? 0).toStringAsFixed(0)}', 'Earned',
-       Icons.payments_rounded, const Color(0xFF5C3D9F)),
-    ];
     return Container(
-      color: HarayaColors.sectionBg,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      child: Row(
-        children: items
-            .map((i) => Expanded(
-                child: _StatCard(value: i.$1, label: i.$2, icon: i.$3, color: i.$4)))
-            .toList(),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: HarayaColors.border, width: 0.8),
+        ),
       ),
+      child: _loadingStats
+          ? Row(
+              children: List.generate(
+                4,
+                (_) => Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: HarayaColors.sectionBg,
+                      borderRadius: BorderRadius.circular(HarayaRadius.md),
+                    ),
+                    child: Column(
+                      children: [
+                        ShimmerBox(
+                            width: 20,
+                            height: 20,
+                            borderRadius: BorderRadius.circular(10)),
+                        const SizedBox(height: 6),
+                        ShimmerBox(
+                            width: 32,
+                            height: 14,
+                            borderRadius: BorderRadius.circular(4)),
+                        const SizedBox(height: 4),
+                        ShimmerBox(
+                            width: 24,
+                            height: 10,
+                            borderRadius: BorderRadius.circular(4)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : Row(
+              children: [
+                _StatCard(
+                    value: _stats['deliveries_today']?.toString() ?? '0',
+                    label: 'Today',
+                    icon: Icons.local_shipping_rounded,
+                    color: HarayaColors.primary),
+                _StatCard(
+                    value: _stats['pending']?.toString() ?? '0',
+                    label: 'Active',
+                    icon: Icons.pending_actions_rounded,
+                    color: const Color(0xFFE65100)),
+                _StatCard(
+                    value: _stats['completed']?.toString() ?? '0',
+                    label: 'Done',
+                    icon: Icons.check_circle_rounded,
+                    color: HarayaColors.success),
+                _StatCard(
+                    value:
+                        '₱${((_stats['earnings_today'] as num?) ?? 0).toStringAsFixed(0)}',
+                    label: 'Earned',
+                    icon: Icons.payments_rounded,
+                    color: const Color(0xFF5C3D9F)),
+              ],
+            ),
     );
   }
 
@@ -278,10 +394,11 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
       child: TabBar(
         controller: _tabs,
         labelColor: HarayaColors.primary,
-        unselectedLabelColor: const Color(0xFF888888),
+        unselectedLabelColor: HarayaColors.textMuted,
         indicatorColor: HarayaColors.primary,
         indicatorWeight: 3,
-        labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+        labelStyle:
+            GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
         unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
         tabs: [
           Tab(text: 'Active (${_active.length})'),
@@ -292,22 +409,99 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
     );
   }
 
+  Widget _buildListSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 3,
+      itemBuilder: (_, __) => Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(HarayaRadius.lg),
+          border: Border.all(color: HarayaColors.border, width: 0.8),
+          boxShadow: HarayaShadows.card,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: HarayaColors.sectionBg,
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(HarayaRadius.lg)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  ShimmerBox(
+                      width: 100,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(6)),
+                  const Spacer(),
+                  ShimmerBox(
+                      width: 70,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(6)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShimmerBox(
+                      width: double.infinity,
+                      height: 13,
+                      borderRadius: BorderRadius.circular(6)),
+                  const SizedBox(height: 8),
+                  ShimmerBox(
+                      width: 220,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(6)),
+                  const SizedBox(height: 8),
+                  ShimmerBox(
+                      width: 180,
+                      height: 12,
+                      borderRadius: BorderRadius.circular(6)),
+                  const SizedBox(height: 16),
+                  ShimmerBox(
+                      width: double.infinity,
+                      height: 44,
+                      borderRadius:
+                          BorderRadius.circular(HarayaRadius.md)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Active tab ─────────────────────────────────────────────────────────────
   Widget _buildActiveTab() {
-    if (_loadingActive) return const Center(child: CircularProgressIndicator());
+    if (_loadingActive) return _buildListSkeleton();
     if (_active.isEmpty) {
-      return _buildEmpty(Icons.inbox_rounded, 'No active deliveries',
-          'Grab one from Available');
+      return const EmptyState(
+        icon: Icons.inbox_rounded,
+        title: 'No active deliveries',
+        subtitle: 'Grab one from the Available tab.',
+      );
     }
     return RefreshIndicator(
       onRefresh: _loadActive,
       color: HarayaColors.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         itemCount: _active.length,
-        itemBuilder: (_, i) => _ActiveCard(
-          delivery: _active[i],
-          onMarkDelivered: () => _markDelivered(_active[i]['order_id'] as int),
+        itemBuilder: (_, i) => FadeSlideIn(
+          delay: Duration(milliseconds: (i % 8) * 50),
+          child: _ActiveCard(
+            delivery: _active[i],
+            onMarkDelivered: () => _markDelivered(_active[i]['order_id'] as int),
+          ),
         ),
       ),
     );
@@ -315,20 +509,26 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
 
   // ── Available tab ──────────────────────────────────────────────────────────
   Widget _buildAvailableTab() {
-    if (_loadingAvailable) return const Center(child: CircularProgressIndicator());
+    if (_loadingAvailable) return _buildListSkeleton();
     if (_available.isEmpty) {
-      return _buildEmpty(Icons.search_off_rounded, 'No available deliveries',
-          'Check back soon for new orders');
+      return const EmptyState(
+        icon: Icons.search_off_rounded,
+        title: 'No available deliveries',
+        subtitle: 'Check back soon for new orders.',
+      );
     }
     return RefreshIndicator(
       onRefresh: _loadAvailable,
       color: HarayaColors.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         itemCount: _available.length,
-        itemBuilder: (_, i) => _AvailableCard(
-          delivery: _available[i],
-          onTake: () => _takeDelivery(_available[i]['order_id'] as int),
+        itemBuilder: (_, i) => FadeSlideIn(
+          delay: Duration(milliseconds: (i % 8) * 50),
+          child: _AvailableCard(
+            delivery: _available[i],
+            onTake: () => _takeDelivery(_available[i]['order_id'] as int),
+          ),
         ),
       ),
     );
@@ -336,37 +536,24 @@ class _RiderDashboardScreenState extends State<RiderDashboardScreen>
 
   // ── History tab ────────────────────────────────────────────────────────────
   Widget _buildHistoryTab() {
-    if (_loadingHistory) return const Center(child: CircularProgressIndicator());
+    if (_loadingHistory) return _buildListSkeleton();
     if (_history.isEmpty) {
-      return _buildEmpty(Icons.history_rounded, 'No deliveries yet',
-          'Your completed deliveries will appear here');
+      return const EmptyState(
+        icon: Icons.history_rounded,
+        title: 'No deliveries yet',
+        subtitle: 'Your completed deliveries will appear here.',
+      );
     }
     return RefreshIndicator(
       onRefresh: _loadHistory,
       color: HarayaColors.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         itemCount: _history.length,
-        itemBuilder: (_, i) => _HistoryCard(item: _history[i]),
-      ),
-    );
-  }
-
-  Widget _buildEmpty(IconData icon, String title, String subtitle) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: const Color(0xFFCCCCCC)),
-          const SizedBox(height: 14),
-          Text(title,
-              style: GoogleFonts.poppins(
-                  fontSize: 15, fontWeight: FontWeight.w600,
-                  color: HarayaColors.textDark)),
-          const SizedBox(height: 6),
-          Text(subtitle,
-              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF888888))),
-        ],
+        itemBuilder: (_, i) => FadeSlideIn(
+          delay: Duration(milliseconds: (i % 8) * 50),
+          child: _HistoryCard(item: _history[i]),
+        ),
       ),
     );
   }
@@ -384,11 +571,11 @@ Future<List<LatLng>> _fetchRoadRoute(
   if (_routeCache.containsKey(key)) return _routeCache[key]!;
 
   try {
-    // Use OSRM with HTTPS
     final url = 'https://router.project-osrm.org/route/v1/driving/'
         '$fromLng,$fromLat;$toLng,$toLat'
         '?overview=full&geometries=geojson&steps=true';
-    final resp = await http.get(Uri.parse(url))
+    final resp = await http
+        .get(Uri.parse(url))
         .timeout(const Duration(seconds: 15));
 
     if (resp.statusCode == 200) {
@@ -399,8 +586,8 @@ Future<List<LatLng>> _fetchRoadRoute(
         final geometry = routes[0]['geometry'];
         if (geometry is Map && geometry['coordinates'] != null) {
           final coords = (geometry['coordinates'] as List)
-              .map((c) => LatLng(
-                  (c[1] as num).toDouble(), (c[0] as num).toDouble()))
+              .map((c) =>
+                  LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
               .toList();
 
           if (coords.isNotEmpty) {
@@ -411,31 +598,27 @@ Future<List<LatLng>> _fetchRoadRoute(
       }
     }
   } catch (e) {
-    debugPrint('⚠️ Route fetch failed: $e');
+    debugPrint('Route fetch failed: $e');
   }
 
-  // Fallback to straight line
   final fallback = [LatLng(fromLat, fromLng), LatLng(toLat, toLng)];
   _routeCache[key] = fallback;
   return fallback;
 }
 
 // ── Delivery Map (inline preview) ────────────────────────────────────────────
-// Green marker = pickup (seller), Red marker = dropoff (buyer).
 
 class _DeliveryMap extends StatefulWidget {
   final double pickupLat;
   final double pickupLng;
   final double dropoffLat;
   final double dropoffLng;
-  final double height;
 
   const _DeliveryMap({
     required this.pickupLat,
     required this.pickupLng,
     required this.dropoffLat,
     required this.dropoffLng,
-    this.height = 190,
   });
 
   @override
@@ -459,8 +642,10 @@ class _DeliveryMapState extends State<_DeliveryMap> {
   Future<void> _loadRoute() async {
     try {
       final points = await _fetchRoadRoute(
-        widget.pickupLat, widget.pickupLng,
-        widget.dropoffLat, widget.dropoffLng,
+        widget.pickupLat,
+        widget.pickupLng,
+        widget.dropoffLat,
+        widget.dropoffLng,
       );
       if (mounted) {
         setState(() {
@@ -469,26 +654,23 @@ class _DeliveryMapState extends State<_DeliveryMap> {
         });
       }
     } catch (e) {
-      debugPrint('Error loading route: $e');
-      if (mounted) {
-        setState(() => _loadingRoute = false);
-      }
+      if (mounted) setState(() => _loadingRoute = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final pickup  = LatLng(widget.pickupLat,  widget.pickupLng);
+    final pickup  = LatLng(widget.pickupLat, widget.pickupLng);
     final dropoff = LatLng(widget.dropoffLat, widget.dropoffLng);
     final center  = LatLng(
-      (widget.pickupLat  + widget.dropoffLat)  / 2,
+      (widget.pickupLat + widget.dropoffLat) / 2,
       (widget.pickupLng + widget.dropoffLng) / 2,
     );
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(HarayaRadius.md),
       child: SizedBox(
-        height: widget.height,
+        height: 190,
         child: Stack(
           children: [
             FlutterMap(
@@ -519,15 +701,19 @@ class _DeliveryMapState extends State<_DeliveryMap> {
                   markers: [
                     Marker(
                       point: pickup,
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       child: const _MapPin(
-                          color: Color(0xFF2E7D32), icon: Icons.store_rounded),
+                          color: Color(0xFF2E7D32),
+                          icon: Icons.store_rounded),
                     ),
                     Marker(
                       point: dropoff,
-                      width: 36, height: 36,
+                      width: 36,
+                      height: 36,
                       child: const _MapPin(
-                          color: Color(0xFFC62828), icon: Icons.home_rounded),
+                          color: Color(0xFFC62828),
+                          icon: Icons.home_rounded),
                     ),
                   ],
                 ),
@@ -613,12 +799,13 @@ class _FullscreenMapState extends State<_FullscreenMap> {
 
   Future<void> _loadRoute() async {
     final points = await _fetchRoadRoute(
-      widget.pickupLat, widget.pickupLng,
-      widget.dropoffLat, widget.dropoffLng,
+      widget.pickupLat,
+      widget.pickupLng,
+      widget.dropoffLat,
+      widget.dropoffLng,
     );
     if (!mounted) return;
     setState(() => _routePoints = points);
-    // Fit camera to show the entire road route
     final bounds = LatLngBounds.fromPoints(points);
     _mapController.fitCamera(
       CameraFit.bounds(
@@ -630,15 +817,17 @@ class _FullscreenMapState extends State<_FullscreenMap> {
 
   @override
   Widget build(BuildContext context) {
-    final pickup  = LatLng(widget.pickupLat,  widget.pickupLng);
+    final pickup  = LatLng(widget.pickupLat, widget.pickupLng);
     final dropoff = LatLng(widget.dropoffLat, widget.dropoffLng);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('Delivery Route',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600, fontSize: 17, color: Colors.white)),
         backgroundColor: HarayaColors.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Stack(
         children: [
@@ -671,13 +860,15 @@ class _FullscreenMapState extends State<_FullscreenMap> {
                 markers: [
                   Marker(
                     point: pickup,
-                    width: 44, height: 44,
+                    width: 44,
+                    height: 44,
                     child: const _MapPin(
                         color: Color(0xFF2E7D32), icon: Icons.store_rounded),
                   ),
                   Marker(
                     point: dropoff,
-                    width: 44, height: 44,
+                    width: 44,
+                    height: 44,
                     child: const _MapPin(
                         color: Color(0xFFC62828), icon: Icons.home_rounded),
                   ),
@@ -685,34 +876,32 @@ class _FullscreenMapState extends State<_FullscreenMap> {
               ),
             ],
           ),
-          // Legend panel
           Positioned(
             bottom: 24,
             left: 16,
             right: 16,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 8)
-                ],
+                borderRadius: BorderRadius.circular(HarayaRadius.lg),
+                boxShadow: HarayaShadows.card,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _LegendRow(
-                      color: const Color(0xFF2E7D32),
-                      icon: Icons.store_rounded,
-                      label: 'Pickup: ${widget.pickupLabel}'),
+                    color: const Color(0xFF2E7D32),
+                    icon: Icons.store_rounded,
+                    label: 'Pickup: ${widget.pickupLabel}',
+                  ),
                   const SizedBox(height: 8),
                   _LegendRow(
-                      color: const Color(0xFFC62828),
-                      icon: Icons.home_rounded,
-                      label: 'Deliver to: ${widget.dropoffLabel}'),
+                    color: const Color(0xFFC62828),
+                    icon: Icons.home_rounded,
+                    label: 'Deliver to: ${widget.dropoffLabel}',
+                  ),
                 ],
               ),
             ),
@@ -727,22 +916,28 @@ class _LegendRow extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String label;
-  const _LegendRow({required this.color, required this.icon, required this.label});
+  const _LegendRow(
+      {required this.color, required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
-          width: 28, height: 28,
+          width: 28,
+          height: 28,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           child: Icon(icon, color: Colors.white, size: 15),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(label,
-              style: GoogleFonts.poppins(fontSize: 12, color: HarayaColors.textDark),
-              maxLines: 2, overflow: TextOverflow.ellipsis),
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+                fontSize: 12, color: HarayaColors.textDark),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -780,46 +975,22 @@ class _ActiveCardState extends State<_ActiveCard> {
 
     setState(() => _uploadingProof = true);
     try {
-      final userId = (widget.delivery['rider_id'] as int?) ?? 0;
+      final userId  = (widget.delivery['rider_id'] as int?) ?? 0;
       final orderId = widget.delivery['order_id'] as int;
-      final result = await ApiService.uploadProofOfDelivery(userId, orderId, imagePath);
+      final result  = await ApiService.uploadProofOfDelivery(userId, orderId, imagePath);
       if (!mounted) return;
 
       if (result['success'] == true) {
         setState(() => _proofPath = result['photo_url']);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Proof uploaded successfully!',
-                style: GoogleFonts.poppins(fontSize: 13)),
-            backgroundColor: HarayaColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        showHarayaSnackBar(context, 'Proof uploaded successfully!',
+            icon: Icons.camera_alt_rounded);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['error'] ?? 'Upload failed',
-                style: GoogleFonts.poppins(fontSize: 13)),
-            backgroundColor: HarayaColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        showHarayaSnackBar(
+            context, result['error'] ?? 'Upload failed.', isError: true);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e', style: GoogleFonts.poppins(fontSize: 13)),
-            backgroundColor: HarayaColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        showHarayaSnackBar(context, 'Error: $e', isError: true);
       }
     } finally {
       if (mounted) setState(() => _uploadingProof = false);
@@ -841,173 +1012,259 @@ class _ActiveCardState extends State<_ActiveCard> {
 
   @override
   Widget build(BuildContext context) {
-    final status = widget.delivery['delivery_status'] ?? 'ontheway';
-    final isPending = status == 'pending_approval';
+    final status     = widget.delivery['delivery_status'] ?? 'ontheway';
+    final isPending  = status == 'pending_approval';
+    final isPickedUp = status == 'picked_up';
+
     final statusColor = isPending
         ? const Color(0xFFF57C00)
-        : status == 'picked_up'
-            ? const Color(0xFF388E3C)
+        : isPickedUp
+            ? HarayaColors.success
             : HarayaColors.primary;
     final statusLabel = isPending
         ? 'Awaiting Seller Approval'
-        : status == 'picked_up'
+        : isPickedUp
             ? 'Picked Up'
             : 'On the Way';
+    final statusIcon = isPending
+        ? Icons.hourglass_top_rounded
+        : isPickedUp
+            ? Icons.inventory_2_rounded
+            : Icons.local_shipping_rounded;
 
     final sLat = _toDouble(widget.delivery['seller_lat']);
     final sLng = _toDouble(widget.delivery['seller_lng']);
     final bLat = _toDouble(widget.delivery['buyer_lat']);
     final bLng = _toDouble(widget.delivery['buyer_lng']);
-    final hasMap = sLat != null && sLng != null && bLat != null && bLng != null
-        && !(sLat == 0 && sLng == 0) && !(bLat == 0 && bLng == 0);
+    final hasMap = sLat != null &&
+        sLng != null &&
+        bLat != null &&
+        bLng != null &&
+        !(sLat == 0 && sLng == 0) &&
+        !(bLat == 0 && bLng == 0);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status + order ID
-            Row(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(HarayaRadius.lg),
+        border: Border.all(color: HarayaColors.border, width: 0.8),
+        boxShadow: HarayaShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status header strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.07),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(HarayaRadius.lg)),
+              border: Border(
+                bottom: BorderSide(
+                    color: statusColor.withValues(alpha: 0.15), width: 0.8),
+              ),
+            ),
+            child: Row(
               children: [
-                _StatusBadge(label: statusLabel, color: statusColor),
+                Icon(statusIcon, size: 15, color: statusColor),
+                const SizedBox(width: 6),
+                Text(
+                  statusLabel,
+                  style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor),
+                ),
                 const Spacer(),
-                Text('Order #${widget.delivery['order_id']}',
-                    style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF888888))),
+                Text(
+                  'Order #${widget.delivery['order_id']}',
+                  style: GoogleFonts.poppins(
+                      fontSize: 11, color: HarayaColors.textMuted),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            _InfoRow(icon: Icons.person_rounded, label: widget.delivery['customer_name'] ?? '—'),
-            const SizedBox(height: 5),
-            _InfoRow(icon: Icons.inventory_2_rounded, label: widget.delivery['product_name'] ?? '—'),
-            const SizedBox(height: 5),
-            _InfoRow(icon: Icons.location_on_rounded,
-                label: widget.delivery['delivery_address'] ?? '—', maxLines: 2),
+          ),
 
-            // Map
-            if (hasMap) ...[
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => _FullscreenMap(
-                      pickupLat: sLat, pickupLng: sLng,
-                      dropoffLat: bLat, dropoffLng: bLng,
-                      pickupLabel: widget.delivery['seller_address'] ?? 'Seller',
-                      dropoffLabel: widget.delivery['delivery_address'] ?? widget.delivery['customer_name'] ?? 'Buyer',
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _InfoRow(
+                    icon: Icons.person_outline_rounded,
+                    label: (widget.delivery['customer_name'] ?? '—').toString()),
+                const SizedBox(height: 6),
+                _InfoRow(
+                    icon: Icons.inventory_2_outlined,
+                    label: (widget.delivery['product_name'] ?? '—').toString()),
+                const SizedBox(height: 6),
+                _InfoRow(
+                    icon: Icons.location_on_outlined,
+                    label:
+                        (widget.delivery['delivery_address'] ?? '—').toString(),
+                    maxLines: 2),
+
+                if (hasMap) ...[
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => _FullscreenMap(
+                          pickupLat: sLat,
+                          pickupLng: sLng,
+                          dropoffLat: bLat,
+                          dropoffLng: bLng,
+                          pickupLabel:
+                              (widget.delivery['seller_address'] ?? 'Seller')
+                                  .toString(),
+                          dropoffLabel: (widget.delivery['delivery_address'] ??
+                                  widget.delivery['customer_name'] ??
+                                  'Buyer')
+                              .toString(),
+                        ),
+                      ),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        _DeliveryMap(
+                            pickupLat: sLat,
+                            pickupLng: sLng,
+                            dropoffLat: bLat,
+                            dropoffLng: bLng),
+                        Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius:
+                                BorderRadius.circular(HarayaRadius.sm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.fullscreen,
+                                  color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text('Expand',
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                child: Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    _DeliveryMap(
-                        pickupLat: sLat, pickupLng: sLng,
-                        dropoffLat: bLat, dropoffLng: bLng),
+                  const SizedBox(height: 8),
+                  _MapLegend(),
+                ],
+
+                const SizedBox(height: 14),
+                if (isPending)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(HarayaRadius.md),
+                      border: Border.all(
+                          color: const Color(0xFFF57C00).withValues(alpha: 0.4),
+                          width: 0.8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.hourglass_top_rounded,
+                            color: Color(0xFFF57C00), size: 16),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Waiting for seller to approve your request',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: const Color(0xFFF57C00)),
+                        ),
+                      ],
+                    ),
+                  )
+                else ...[
+                  if (_proofPath == null) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed:
+                            _uploadingProof ? null : _uploadProofOfDelivery,
+                        icon: _uploadingProof
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.camera_alt_rounded, size: 18),
+                        label: Text(
+                          _uploadingProof
+                              ? 'Uploading...'
+                              : 'Upload Delivery Proof',
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: HarayaColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ] else ...[
                     Container(
-                      margin: const EdgeInsets.all(8),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
+                        color: HarayaColors.success.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(HarayaRadius.md),
+                        border: Border.all(
+                            color: HarayaColors.success.withValues(alpha: 0.3),
+                            width: 0.8),
                       ),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.fullscreen, color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text('Expand', style: GoogleFonts.poppins(color: Colors.white, fontSize: 10)),
+                          Icon(Icons.check_circle_outline_rounded,
+                              color: HarayaColors.success, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Proof of delivery uploaded',
+                            style: GoogleFonts.poppins(
+                                fontSize: 12, color: HarayaColors.success),
+                          ),
                         ],
                       ),
                     ),
+                    const SizedBox(height: 10),
                   ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              _MapLegend(),
-            ],
-
-            const SizedBox(height: 14),
-            if (isPending)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3E0),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFF57C00), width: 1),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.hourglass_top_rounded,
-                        color: Color(0xFFF57C00), size: 16),
-                    const SizedBox(width: 8),
-                    Text('Waiting for seller to approve your request',
-                        style: GoogleFonts.poppins(
-                            fontSize: 12, color: const Color(0xFFF57C00))),
-                  ],
-                ),
-              )
-            else ...[
-              // Proof of delivery section
-              if (_proofPath == null) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _uploadingProof ? null : _uploadProofOfDelivery,
-                    icon: _uploadingProof
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.camera_alt_rounded, size: 18),
-                    label: Text(_uploadingProof ? 'Uploading...' : 'Upload Delivery Proof',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed:
+                          _proofPath == null ? null : widget.onMarkDelivered,
+                      icon: const Icon(Icons.check_circle_rounded, size: 18),
+                      label: const Text('Mark as Delivered'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _proofPath == null
+                            ? HarayaColors.textMuted
+                            : HarayaColors.success,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 10),
-              ] else ...[
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.green, width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text('Proof uploaded',
-                            style: GoogleFonts.poppins(fontSize: 12, color: Colors.green)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
+                ],
               ],
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _proofPath == null ? null : widget.onMarkDelivered,
-                  icon: const Icon(Icons.check_circle_rounded, size: 18),
-                  label: const Text('Mark as Delivered'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _proofPath == null ? Colors.grey : const Color(0xFF388E3C),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1027,93 +1284,150 @@ class _AvailableCard extends StatelessWidget {
     final sLng = _toDouble(delivery['seller_lng']);
     final bLat = _toDouble(delivery['buyer_lat']);
     final bLng = _toDouble(delivery['buyer_lng']);
-    final hasMap = sLat != null && sLng != null && bLat != null && bLng != null
-        && !(sLat == 0 && sLng == 0) && !(bLat == 0 && bLng == 0);
+    final hasMap = sLat != null &&
+        sLng != null &&
+        bLat != null &&
+        bLng != null &&
+        !(sLat == 0 && sLng == 0) &&
+        !(bLat == 0 && bLng == 0);
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(HarayaRadius.lg),
+        border: Border.all(color: HarayaColors.border, width: 0.8),
+        boxShadow: HarayaShadows.card,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Status header strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            decoration: BoxDecoration(
+              color: HarayaColors.primary.withValues(alpha: 0.07),
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(HarayaRadius.lg)),
+              border: Border(
+                bottom: BorderSide(
+                    color: HarayaColors.primary.withValues(alpha: 0.15),
+                    width: 0.8),
+              ),
+            ),
+            child: Row(
               children: [
-                _StatusBadge(label: 'For Pickup', color: HarayaColors.primary),
+                const Icon(Icons.storefront_outlined,
+                    size: 15, color: HarayaColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Available for Pickup',
+                  style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: HarayaColors.primary),
+                ),
                 const Spacer(),
-                Text('₱$fee',
-                    style: GoogleFonts.poppins(
-                        fontSize: 15, fontWeight: FontWeight.w700,
-                        color: HarayaColors.primary)),
+                Text(
+                  '₱$fee',
+                  style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: HarayaColors.priceRed,
+                      letterSpacing: -0.3),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            _InfoRow(icon: Icons.person_rounded, label: delivery['customer_name'] ?? '—'),
-            const SizedBox(height: 5),
-            _InfoRow(icon: Icons.inventory_2_rounded, label: delivery['product_name'] ?? '—'),
-            const SizedBox(height: 5),
-            _InfoRow(icon: Icons.location_on_rounded,
-                label: delivery['delivery_address'] ?? '—', maxLines: 2),
+          ),
 
-            // Map — pickup (green/seller) to dropoff (red/buyer)
-            if (hasMap) ...[
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => _FullscreenMap(
-                      pickupLat: sLat, pickupLng: sLng,
-                      dropoffLat: bLat, dropoffLng: bLng,
-                      pickupLabel: 'Garcia Home Furnishings',
-                      dropoffLabel: delivery['delivery_address'] ?? delivery['customer_name'] ?? 'Buyer',
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _InfoRow(
+                    icon: Icons.person_outline_rounded,
+                    label: (delivery['customer_name'] ?? '—').toString()),
+                const SizedBox(height: 6),
+                _InfoRow(
+                    icon: Icons.inventory_2_outlined,
+                    label: (delivery['product_name'] ?? '—').toString()),
+                const SizedBox(height: 6),
+                _InfoRow(
+                    icon: Icons.location_on_outlined,
+                    label: (delivery['delivery_address'] ?? '—').toString(),
+                    maxLines: 2),
+
+                if (hasMap) ...[
+                  const SizedBox(height: 14),
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => _FullscreenMap(
+                          pickupLat: sLat,
+                          pickupLng: sLng,
+                          dropoffLat: bLat,
+                          dropoffLng: bLng,
+                          pickupLabel: 'Seller',
+                          dropoffLabel: (delivery['delivery_address'] ??
+                                  delivery['customer_name'] ??
+                                  'Buyer')
+                              .toString(),
+                        ),
+                      ),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.topRight,
+                      children: [
+                        _DeliveryMap(
+                            pickupLat: sLat,
+                            pickupLng: sLng,
+                            dropoffLat: bLat,
+                            dropoffLng: bLng),
+                        Container(
+                          margin: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius:
+                                BorderRadius.circular(HarayaRadius.sm),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.fullscreen,
+                                  color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text('Expand',
+                                  style: GoogleFonts.poppins(
+                                      color: Colors.white, fontSize: 10)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                child: Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    _DeliveryMap(
-                        pickupLat: sLat, pickupLng: sLng,
-                        dropoffLat: bLat, dropoffLng: bLng),
-                    Container(
-                      margin: const EdgeInsets.all(8),
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.fullscreen, color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text('Expand', style: GoogleFonts.poppins(color: Colors.white, fontSize: 10)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              _MapLegend(),
-            ],
+                  const SizedBox(height: 8),
+                  _MapLegend(),
+                ],
 
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: onTake,
-                icon: const Icon(Icons.local_shipping_rounded, size: 18),
-                label: const Text('Accept Delivery'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: onTake,
+                    icon: const Icon(Icons.local_shipping_rounded, size: 18),
+                    label: const Text('Accept Delivery'),
+                    style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12)),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1125,37 +1439,65 @@ class _HistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(
-            color: const Color(0xFF388E3C).withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF388E3C), size: 22),
-        ),
-        title: Text(item['product_name'] ?? '—',
-            style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-            maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(HarayaRadius.lg),
+        border: Border.all(color: HarayaColors.border, width: 0.8),
+        boxShadow: HarayaShadows.card,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
           children: [
-            Text(item['customer_name'] ?? '—',
-                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF666666))),
-            Text(item['delivered_date'] ?? '—',
-                style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFFAAAAAA))),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: HarayaColors.success.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(HarayaRadius.md),
+              ),
+              child: Icon(Icons.check_circle_outline_rounded,
+                  color: HarayaColors.success, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (item['product_name'] ?? '—').toString(),
+                    style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: HarayaColors.textDark),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    (item['customer_name'] ?? '—').toString(),
+                    style: GoogleFonts.poppins(
+                        fontSize: 11, color: HarayaColors.textMuted),
+                  ),
+                  Text(
+                    (item['delivered_date'] ?? '—').toString(),
+                    style: GoogleFonts.poppins(
+                        fontSize: 10, color: HarayaColors.textLight),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              '₱${((item['shipping_fee'] as num?) ?? 0).toStringAsFixed(0)}',
+              style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: HarayaColors.priceRed),
+            ),
           ],
-        ),
-        trailing: Text(
-          '₱${((item['shipping_fee'] as num?) ?? 0).toStringAsFixed(0)}',
-          style: GoogleFonts.poppins(
-              fontSize: 13, fontWeight: FontWeight.w600,
-              color: HarayaColors.primary),
         ),
       ),
     );
@@ -1163,26 +1505,6 @@ class _HistoryCard extends StatelessWidget {
 }
 
 // ── Shared small widgets ───────────────────────────────────────────────────────
-
-class _StatusBadge extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _StatusBadge({required this.label, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(label,
-          style: GoogleFonts.poppins(
-              fontSize: 11, fontWeight: FontWeight.w600, color: color)),
-    );
-  }
-}
 
 class _MapLegend extends StatelessWidget {
   @override
@@ -1208,12 +1530,14 @@ class _LegendDot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 10, height: 10,
+          width: 10,
+          height: 10,
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 5),
         Text(label,
-            style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF666666))),
+            style: GoogleFonts.poppins(
+                fontSize: 10, color: HarayaColors.textMuted)),
       ],
     );
   }
@@ -1234,24 +1558,34 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: const [BoxShadow(color: Color(0x11000000), blurRadius: 6)],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 6),
-          Text(value,
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(HarayaRadius.md),
+          border: Border.all(color: color.withValues(alpha: 0.15), width: 0.8),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(height: 6),
+            Text(
+              value,
               style: GoogleFonts.poppins(
-                  fontSize: 16, fontWeight: FontWeight.w700, color: color)),
-          Text(label,
-              style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF888888))),
-        ],
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  letterSpacing: -0.3),
+            ),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                  fontSize: 10, color: HarayaColors.textMuted),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1261,20 +1595,25 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final int maxLines;
-  const _InfoRow({required this.icon, required this.label, this.maxLines = 1});
+
+  const _InfoRow(
+      {required this.icon, required this.label, this.maxLines = 1});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 15, color: const Color(0xFF888888)),
+        Icon(icon, size: 14, color: HarayaColors.textMuted),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(label,
-              maxLines: maxLines,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(fontSize: 13, color: HarayaColors.textDark)),
+          child: Text(
+            label,
+            maxLines: maxLines,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.poppins(
+                fontSize: 13, color: HarayaColors.textDark, height: 1.4),
+          ),
         ),
       ],
     );

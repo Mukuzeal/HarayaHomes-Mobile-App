@@ -12,6 +12,7 @@ import 'login_screen.dart';
 import 'orders_screen.dart';
 import 'address_screen.dart';
 import 'payment_card_screen.dart';
+import 'payment_qr_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -140,6 +141,27 @@ class _CartScreenState extends State<CartScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => PaymentCardScreen(
+            userId: _userId,
+            cartIds: _selected.toList(),
+            totalAmount: _subtotal,
+            shippingFee: _shipping,
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (result != null && result['success'] == true) {
+        _snack('Payment successful! Your order has been placed.');
+        await _load();
+        setState(() => _selected.clear());
+      }
+      return;
+    }
+
+    if (paymentType == 'gcash' || paymentType == 'qrph') {
+      final result = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentQrScreen(
             userId: _userId,
             cartIds: _selected.toList(),
             totalAmount: _subtotal,

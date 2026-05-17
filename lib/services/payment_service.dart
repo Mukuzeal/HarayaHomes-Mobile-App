@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme.dart';
+import '../utils/payment_launcher.dart';
 import 'api_service.dart';
 
 class PaymentResult {
@@ -20,13 +20,12 @@ class PaymentService {
     required String checkoutUrl,
     required String sessionId,
   }) async {
-    // Open PayMongo checkout in a new browser tab
-    final uri = Uri.parse(checkoutUrl);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    // Open PayMongo checkout in a popup window (stays within the browser session)
+    openPaymentPopup(checkoutUrl);
 
     if (!context.mounted) return null;
 
-    // Show a waiting dialog while the user completes payment in the tab
+    // Show a waiting dialog while the user completes payment in the popup
     return showDialog<PaymentResult>(
       context: context,
       barrierDismissible: false,

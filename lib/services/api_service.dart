@@ -255,6 +255,9 @@ class ApiService {
       final response = await http.post(Uri.parse(url), headers: headers, body: jsonEncode(bodyMap))
           .timeout(const Duration(seconds: 20));
       _log('Payment', 'Status: ${response.statusCode}');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        _logError('Payment', 'Error body: ${response.body}');
+      }
       return jsonDecode(response.body) as Map<String, dynamic>;
     } catch (e) {
       _logError('Payment', 'createPaymentSession error: $e');

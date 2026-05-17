@@ -265,6 +265,20 @@ class ApiService {
     }
   }
 
+  // ── CHECK PAYMENT SESSION STATUS ──────────────────────────────────────────
+  static Future<Map<String, dynamic>> checkPaymentSession(String sessionId) async {
+    final url = '$baseUrl/api/payment/status?session_id=${Uri.encodeComponent(sessionId)}';
+    _log('Payment', 'GET → $url');
+    try {
+      final response = await http.get(Uri.parse(url), headers: await _getHeaders())
+          .timeout(const Duration(seconds: 10));
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      _logError('Payment', 'checkPaymentSession error: $e');
+      return {'paid': false, 'message': e.toString()};
+    }
+  }
+
   // ── DIRECT CARD CHARGE (PayMongo Payment Intent, in-app) ──────────────────
   static Future<Map<String, dynamic>> directCharge({
     required int userId,

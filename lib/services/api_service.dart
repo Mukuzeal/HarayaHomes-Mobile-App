@@ -1000,4 +1000,58 @@ class ApiService {
       return {'success': false, 'error': e.toString()};
     }
   }
+
+  // ── MESSAGING ─────────────────────────────────────────────────────────────────
+  static Future<Map<String, dynamic>> createChat(int otherUserId, int currentUserId) async {
+    const url = '$baseUrl/api/create-chat';
+    _log('Chat', 'POST → $url  other_user=$otherUserId  current=$currentUserId');
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode({'user_id': otherUserId, 'current_user_id': currentUserId}),
+      ).timeout(const Duration(seconds: 10));
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      _logError('Chat', 'createChat exception: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  static Future<List<dynamic>> getChatMessages(int roomId) async {
+    final url = '$baseUrl/api/chat-messages/$roomId';
+    _log('Chat', 'GET → $url');
+    try {
+      final response = await http.get(Uri.parse(url), headers: await _getHeaders())
+          .timeout(const Duration(seconds: 10));
+      final decoded = jsonDecode(response.body);
+      if (decoded is List) return decoded;
+      return (decoded['messages'] as List?) ?? [];
+    } catch (e) {
+      _logError('Chat', 'getChatMessages exception: $e');
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> sendMessage({
+    required int roomId,
+    required String message,
+    required int senderId,
+  }) async {
+    const url = '$baseUrl/api/send-message';
+    _log('Chat', 'POST send → $url  room=$roomId');
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse(url),
+        headers: headers,
+        body: jsonEncode({'room_id': roomId, 'message': message, 'sender_id': senderId}),
+      ).timeout(const Duration(seconds: 10));
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      _logError('Chat', 'sendMessage exception: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
 }

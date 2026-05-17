@@ -6,9 +6,12 @@ import '../services/api_service.dart';
 import '../services/payment_service.dart';
 import '../services/payment_result_service.dart';
 import '../theme.dart';
+import '../utils/app_animations.dart';
+import '../widgets/haraya_widgets.dart';
 import 'login_screen.dart';
 import 'orders_screen.dart';
 import 'address_screen.dart';
+import 'payment_card_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final Map<String, dynamic> user;
@@ -21,10 +24,10 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   int get _userId => (widget.user['id'] as int?) ?? 0;
 
-  List<dynamic> _items  = [];
-  bool _loading         = true;
-  bool _paying          = false;
-  final Set<int> _selected = {};
+  List<dynamic> _items        = [];
+  bool _loading               = true;
+  bool _paying                = false;
+  final Set<int> _selected    = {};
   String? _currentSessionId;
   Map<String, dynamic>? _selectedAddress;
 
@@ -38,15 +41,16 @@ class _CartScreenState extends State<CartScreen> {
     setState(() => _loading = true);
     final items = await ApiService.getCart(_userId);
     setState(() {
-      _items    = items;
-      _loading  = false;
+      _items   = items;
+      _loading = false;
       _selected.addAll(items.map<int>((e) => e['cart_id'] as int));
     });
   }
 
   double get _subtotal => _items
       .where((i) => _selected.contains(i['cart_id'] as int))
-      .fold(0.0, (s, i) => s + (double.tryParse(i['price'].toString()) ?? 0) * (i['quantity'] as int));
+      .fold(0.0, (s, i) =>
+          s + (double.tryParse(i['price'].toString()) ?? 0) * (i['quantity'] as int));
 
   double get _shipping => _selected.isEmpty ? 0 : 50.0;
   double get _total    => _subtotal + _shipping;
@@ -84,8 +88,8 @@ class _CartScreenState extends State<CartScreen> {
     final stock  = int.tryParse(item['stock_quantity'].toString()) ?? 0;
     if (newQty < 1 || newQty > stock) return;
     await ApiService.updateCartItem(
-      cartId: item['cart_id'] as int,
-      userId: _userId,
+      cartId:   item['cart_id'] as int,
+      userId:   _userId,
       quantity: newQty,
     );
     await _load();
@@ -103,8 +107,8 @@ class _CartScreenState extends State<CartScreen> {
     }
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (_) => _PaymentSheet(
         total: _total,
         onPay: (type) => _pay(type),
@@ -124,12 +128,34 @@ class _CartScreenState extends State<CartScreen> {
     );
     if (result != null) {
       setState(() => _selectedAddress = result);
-      _snack('Address selected: ${result['label']}');
+      _snack('Address set: ${result['label']}');
     }
   }
 
   Future<void> _pay(String paymentType) async {
     Navigator.pop(context);
+
+    if (paymentType == 'card') {
+      final result = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentCardScreen(
+            userId: _userId,
+            cartIds: _selected.toList(),
+            totalAmount: _subtotal,
+            shippingFee: _shipping,
+          ),
+        ),
+      );
+      if (!mounted) return;
+      if (result != null && result['success'] == true) {
+        _snack('Payment successful! Your order has been placed.');
+        await _load();
+        setState(() => _selected.clear());
+      }
+      return;
+    }
+
     setState(() => _paying = true);
     try {
       final result = await ApiService.createPaymentSession(
@@ -142,22 +168,21 @@ class _CartScreenState extends State<CartScreen> {
         final sessionId = result['session_id'] as String;
         setState(() => _currentSessionId = sessionId);
 
-        // Save pending payment info for app resume handling
         await PaymentResultService.savePendingPayment(
           sessionId: sessionId,
-          userId: _userId,
+          userId:    _userId,
         );
 
         final url = result['checkout_url'] as String;
         final paymentResult = await PaymentService.showPaymentUI(
           context,
           checkoutUrl: url,
-          sessionId: sessionId,
+          sessionId:   sessionId,
         );
 
         if (!mounted) return;
         if (paymentResult?.success == true) {
-          _snack('Payment successful! Your order has been placed.', isError: false);
+          _snack('Payment successful! Your order has been placed.');
           await _load();
           setState(() => _selected.clear());
         } else if (paymentResult?.success == false) {
@@ -173,35 +198,45 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  void _snack(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: GoogleFonts.poppins(fontSize: 13)),
-      backgroundColor: isError ? HarayaColors.error : HarayaColors.success,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(16),
-    ));
-  }
+  void _snack(String msg, {bool isError = false}) =>
+      showHarayaSnackBar(context, msg, isError: isError);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: HarayaColors.background,
+      backgroundColor: HarayaColors.sectionBg,
       appBar: AppBar(
         backgroundColor: HarayaColors.primary,
         foregroundColor: Colors.white,
-        title: Text('My Cart', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)),
+        elevation: 0,
+        title: Text(
+          'My Cart',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            fontSize: 17,
+            color: Colors.white,
+          ),
+        ),
         actions: [
           TextButton.icon(
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => OrdersScreen(user: widget.user))),
-            icon: const Icon(Icons.receipt_long_outlined, color: Colors.white, size: 18),
-            label: Text('Orders', style: GoogleFonts.poppins(color: Colors.white, fontSize: 12)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => OrdersScreen(user: widget.user)),
+            ),
+            icon: const Icon(Icons.receipt_long_outlined,
+                color: Colors.white, size: 17),
+            label: Text(
+              'Orders',
+              style: GoogleFonts.poppins(
+                  color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? _buildSkeleton()
           : _items.isEmpty
               ? _buildEmpty()
               : _buildList(),
@@ -209,131 +244,262 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildEmpty() => Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.shopping_cart_outlined, size: 72, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text('Your cart is empty',
-              style: GoogleFonts.poppins(fontSize: 16, color: Colors.grey)),
-        ]),
-      );
+  Widget _buildSkeleton() {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      itemCount: 4,
+      itemBuilder: (_, __) => const Padding(
+        padding: EdgeInsets.only(bottom: 12),
+        child: SkeletonListTile(),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return EmptyState(
+      icon: Icons.shopping_cart_outlined,
+      title: 'Your cart is empty',
+      subtitle: 'Browse products and add items to get started.',
+      buttonLabel: 'Start Shopping',
+      onAction: () => Navigator.pop(context),
+    );
+  }
 
   Widget _buildList() {
+    final allSelected = _items.every((i) => _selected.contains(i['cart_id'] as int));
+
     return RefreshIndicator(
       onRefresh: _load,
       color: HarayaColors.primary,
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 100),
-        itemCount: _items.length,
-        itemBuilder: (_, i) => _CartTile(
-          item:      _items[i],
-          selected:  _selected.contains(_items[i]['cart_id'] as int),
-          imgUrl:    _img(_items[i]),
-          onSelect:  (v) => setState(() => v! ? _selected.add(_items[i]['cart_id'] as int)
-                                              : _selected.remove(_items[i]['cart_id'] as int)),
-          onRemove:  () => _remove(_items[i]['cart_id'] as int),
-          onInc:     () => _updateQty(_items[i], 1),
-          onDec:     () => _updateQty(_items[i], -1),
-        ),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+        children: [
+          // Select all row
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Checkbox(
+                  value: allSelected,
+                  tristate: false,
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      _selected.addAll(_items.map<int>((e) => e['cart_id'] as int));
+                    } else {
+                      _selected.clear();
+                    }
+                  }),
+                  activeColor: HarayaColors.primary,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4)),
+                ),
+                Text(
+                  'Select All (${_items.length} items)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: HarayaColors.textDark,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Cart items
+          ...List.generate(_items.length, (i) {
+            final item = _items[i];
+            return FadeSlideIn(
+              delay: Duration(milliseconds: i * 50),
+              child: _CartTile(
+                item:     item,
+                selected: _selected.contains(item['cart_id'] as int),
+                imgUrl:   _img(item),
+                onSelect: (v) => setState(() => v!
+                    ? _selected.add(item['cart_id'] as int)
+                    : _selected.remove(item['cart_id'] as int)),
+                onRemove: () => _remove(item['cart_id'] as int),
+                onInc:    () => _updateQty(item, 1),
+                onDec:    () => _updateQty(item, -1),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
 
   Widget _buildBottomBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 28),
+      padding: EdgeInsets.fromLTRB(
+        20,
+        16,
+        20,
+        16 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, -4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
       ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Subtotal', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey)),
-          Text('₱${_subtotal.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 13)),
-        ]),
-        const SizedBox(height: 4),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Shipping', style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey)),
-          Text('₱${_shipping.toStringAsFixed(2)}', style: GoogleFonts.poppins(fontSize: 13)),
-        ]),
-        const Divider(height: 20),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Total', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
-          Text('₱${_total.toStringAsFixed(2)}',
-              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w800, color: HarayaColors.error)),
-        ]),
-        const SizedBox(height: 14),
-        InkWell(
-          onTap: _selectAddress,
-          borderRadius: BorderRadius.circular(10),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _selectedAddress == null ? Colors.orange.shade50 : Colors.green.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _selectedAddress == null ? Colors.orange.shade200 : Colors.green.shade200,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Address selector
+          PressScale(
+            onTap: _selectAddress,
+            child: AnimatedContainer(
+              duration: HarayaDuration.normal,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: _selectedAddress == null
+                    ? const Color(0xFFFFF8F0)
+                    : HarayaColors.successLight,
+                borderRadius: BorderRadius.circular(HarayaRadius.md),
+                border: Border.all(
+                  color: _selectedAddress == null
+                      ? const Color(0xFFFFB347)
+                      : HarayaColors.success,
+                ),
+              ),
+              child: Row(
+                children: [
+                  AnimatedSwitcher(
+                    duration: HarayaDuration.fast,
+                    child: Icon(
+                      _selectedAddress == null
+                          ? Icons.location_off_outlined
+                          : Icons.location_on_rounded,
+                      key: ValueKey(_selectedAddress == null),
+                      color: _selectedAddress == null
+                          ? const Color(0xFFE88A00)
+                          : HarayaColors.success,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _selectedAddress == null
+                        ? Text(
+                            'Tap to select delivery address',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFFE88A00),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Deliver to',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  color: HarayaColors.textMuted,
+                                ),
+                              ),
+                              Text(
+                                _selectedAddress!['label'] ?? '',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: HarayaColors.textDark,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: _selectedAddress == null
+                        ? const Color(0xFFE88A00)
+                        : HarayaColors.success,
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  _selectedAddress == null ? Icons.location_off : Icons.location_on,
-                  color: _selectedAddress == null ? Colors.orange : Colors.green,
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _selectedAddress == null ? 'No address selected' : 'Deliver to',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          color: _selectedAddress == null ? Colors.orange : Colors.green,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      if (_selectedAddress != null)
-                        Text(
-                          _selectedAddress!['label'] ?? '',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: _selectedAddress == null ? Colors.orange : Colors.green,
-                ),
-              ],
-            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _paying || _selected.isEmpty ? null : _showPaymentSheet,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _paying
-                ? const SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text('Checkout (${_selected.length} item${_selected.length == 1 ? '' : 's'})',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
+          const SizedBox(height: 12),
+
+          // Price summary
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Subtotal',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: HarayaColors.textMuted),
+              ),
+              Text(
+                '₱${_subtotal.toStringAsFixed(2)}',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: HarayaColors.textDark),
+              ),
+            ],
           ),
-        ),
-      ]),
+          const SizedBox(height: 3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Shipping',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: HarayaColors.textMuted),
+              ),
+              Text(
+                '₱${_shipping.toStringAsFixed(2)}',
+                style: GoogleFonts.poppins(
+                    fontSize: 13, color: HarayaColors.textDark),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Divider(color: HarayaColors.border, height: 1),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total',
+                style: GoogleFonts.poppins(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: HarayaColors.textDark,
+                ),
+              ),
+              Text(
+                '₱${_total.toStringAsFixed(2)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: HarayaColors.priceRed,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Checkout button
+          LoadingButton(
+            isLoading: _paying,
+            label: 'Checkout (${_selected.length} item${_selected.length == 1 ? '' : 's'})',
+            onPressed: _selected.isEmpty ? null : _showPaymentSheet,
+            icon: Icons.shopping_bag_outlined,
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ── Cart item tile ─────────────────────────────────────────────────────────────
-
+// ── Cart Item Tile ─────────────────────────────────────────────────────────────
 class _CartTile extends StatelessWidget {
   final dynamic  item;
   final bool     selected;
@@ -353,87 +519,179 @@ class _CartTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final price = double.tryParse(item['price'].toString()) ?? 0.0;
-    final qty   = item['quantity'] as int;
-    final stock = int.tryParse(item['stock_quantity'].toString()) ?? 0;
+    final price  = double.tryParse(item['price'].toString()) ?? 0.0;
+    final qty    = item['quantity'] as int;
+    final stock  = int.tryParse(item['stock_quantity'].toString()) ?? 0;
+    final name   = (item['product_name'] ?? '').toString();
+    final store  = (item['store_name'] ?? '').toString();
 
-    return Card(
+    return AnimatedContainer(
+      duration: HarayaDuration.normal,
       margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(HarayaRadius.lg),
+        border: Border.all(
+          color: selected ? HarayaColors.primary.withValues(alpha: 0.3) : HarayaColors.border,
+          width: selected ? 1.5 : 0.8,
+        ),
+        boxShadow: HarayaShadows.card,
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(children: [
-          Checkbox(
-            value: selected,
-            onChanged: onSelect,
-            activeColor: HarayaColors.primary,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: imgUrl.isNotEmpty
-                ? Image.network(imgUrl, width: 70, height: 70, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _placeholder())
-                : _placeholder(),
-          ),
-          const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(item['product_name'] ?? '',
-                maxLines: 2, overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-            const SizedBox(height: 2),
-            Text(item['store_name'] ?? '',
-                style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
-            const SizedBox(height: 6),
-            Row(children: [
-              Text('₱${price.toStringAsFixed(2)}',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: HarayaColors.error, fontSize: 14)),
-              const Spacer(),
-              _QtyBtn(Icons.remove, onDec, qty > 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text('$qty', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Checkbox
+            Checkbox(
+              value: selected,
+              onChanged: onSelect,
+              activeColor: HarayaColors.primary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4)),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+
+            // Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(HarayaRadius.md),
+              child: imgUrl.isNotEmpty
+                  ? Image.network(
+                      imgUrl,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
+            const SizedBox(width: 12),
+
+            // Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: HarayaColors.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    store,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: HarayaColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '₱${price.toStringAsFixed(2)}',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          color: HarayaColors.priceRed,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const Spacer(),
+                      _QtyBtn(
+                        icon: Icons.remove_rounded,
+                        enabled: qty > 1,
+                        onTap: onDec,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: AnimatedSwitcher(
+                          duration: HarayaDuration.fast,
+                          transitionBuilder: (child, anim) =>
+                              ScaleTransition(scale: anim, child: child),
+                          child: Text(
+                            '$qty',
+                            key: ValueKey(qty),
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              color: HarayaColors.textDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                      _QtyBtn(
+                        icon: Icons.add_rounded,
+                        enabled: qty < stock,
+                        onTap: onInc,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              _QtyBtn(Icons.add, onInc, qty < stock),
-            ]),
-          ])),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            onPressed: onRemove,
-          ),
-        ]),
+            ),
+
+            // Delete
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded,
+                  color: HarayaColors.error, size: 20),
+              onPressed: onRemove,
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _placeholder() => Container(
-      width: 70, height: 70, color: const Color(0xFFEEF3F8),
-      child: const Icon(Icons.home_outlined, color: HarayaColors.primary, size: 30));
+        width: 72,
+        height: 72,
+        color: HarayaColors.sectionBg,
+        child: const Icon(Icons.home_outlined,
+            color: HarayaColors.primary, size: 30),
+      );
 }
 
 class _QtyBtn extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
   final bool enabled;
-  const _QtyBtn(this.icon, this.onTap, this.enabled);
+  final VoidCallback onTap;
+
+  const _QtyBtn({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: enabled ? onTap : null,
-        child: Container(
-          width: 28, height: 28,
-          decoration: BoxDecoration(
-            color: enabled ? HarayaColors.primary : Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon,
-              size: 16, color: enabled ? Colors.white : Colors.grey.shade400),
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: AnimatedContainer(
+        duration: HarayaDuration.fast,
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: enabled ? HarayaColors.primary : HarayaColors.border,
+          borderRadius: BorderRadius.circular(HarayaRadius.sm),
         ),
-      );
+        child: Icon(
+          icon,
+          size: 16,
+          color: enabled ? Colors.white : HarayaColors.textLight,
+        ),
+      ),
+    );
+  }
 }
 
-// ── Payment method bottom sheet ────────────────────────────────────────────────
-
+// ── Payment Bottom Sheet ───────────────────────────────────────────────────────
 class _PaymentSheet extends StatelessWidget {
   final double total;
   final void Function(String) onPay;
@@ -455,200 +713,286 @@ class _PaymentSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Choose Payment Method',
-            style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700)),
-        Text('Total: ₱${total.toStringAsFixed(2)}',
-            style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey)),
-        if (selectedAddress != null) ...[
-          const SizedBox(height: 12),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(HarayaRadius.xxl)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
           Container(
-            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(top: 12),
+            width: 36,
+            height: 4,
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              color: HarayaColors.border,
+              borderRadius: BorderRadius.circular(2),
             ),
-            child: Row(
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              20,
+              24,
+              20 + MediaQuery.of(context).padding.bottom,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.location_on, color: Colors.blue.shade600, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(selectedAddress!['label'] ?? 'Address',
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: HarayaColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(HarayaRadius.md),
+                      ),
+                      child: const Icon(Icons.payment_rounded,
+                          color: HarayaColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose Payment Method',
                           style: GoogleFonts.poppins(
-                              fontSize: 11, fontWeight: FontWeight.w600, color: Colors.blue.shade900)),
-                      Text(selectedAddress!['full_address'] ?? '',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.poppins(fontSize: 10, color: Colors.blue.shade700)),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: HarayaColors.textDark,
+                          ),
+                        ),
+                        Text(
+                          'Total: ₱${total.toStringAsFixed(2)}',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: HarayaColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+
+                // Address preview
+                if (selectedAddress != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: HarayaColors.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(HarayaRadius.md),
+                      border: Border.all(
+                          color: HarayaColors.primary.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded,
+                            color: HarayaColors.primary, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                selectedAddress!['label'] ?? 'Address',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: HarayaColors.primary,
+                                ),
+                              ),
+                              if ((selectedAddress!['full_address'] ?? '')
+                                  .toString()
+                                  .isNotEmpty)
+                                Text(
+                                  selectedAddress!['full_address'] ?? '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: HarayaColors.textMuted,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+                Divider(color: HarayaColors.border, height: 1),
+                const SizedBox(height: 14),
+
+                // Payment options
+                PaymentMethodTile(
+                  emoji: '💳',
+                  label: 'Credit / Debit Card',
+                  subtitle: 'Visa, Mastercard, JCB',
+                  onTap: () => onPay('card'),
+                ),
+                const SizedBox(height: 10),
+                PaymentMethodTile(
+                  emoji: '📱',
+                  label: 'GCash',
+                  subtitle: 'Pay via GCash QR or app',
+                  onTap: () => onPay('gcash'),
+                ),
+                const SizedBox(height: 10),
+                PaymentMethodTile(
+                  emoji: '🔲',
+                  label: 'QRPH',
+                  subtitle: 'Scan any PH bank QR code',
+                  onTap: () => onPay('qrph'),
+                ),
+
+                // Simulation buttons for testing
+                if (sessionId != null) ...[
+                  const SizedBox(height: 20),
+                  Divider(color: HarayaColors.border, height: 1),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Testing Options',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: HarayaColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              _simulatePayment(context, sessionId!, true),
+                          icon: const Icon(Icons.check_circle, size: 16),
+                          label: Text('Simulate Success',
+                              style: GoogleFonts.poppins(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: HarayaColors.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              _simulatePayment(context, sessionId!, false),
+                          icon: const Icon(Icons.cancel, size: 16),
+                          label: Text('Simulate Failure',
+                              style: GoogleFonts.poppins(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: HarayaColors.error,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                ),
+                ],
               ],
             ),
           ),
         ],
-        const SizedBox(height: 20),
-        _MethodTile(
-          icon: '💳', label: 'Credit / Debit Card',
-          sub: 'Visa, Mastercard, JCB',
-          onTap: () => onPay('card'),
-        ),
-        const SizedBox(height: 10),
-        _MethodTile(
-          icon: '📱', label: 'GCash',
-          sub: 'Pay via GCash QR or app',
-          onTap: () => onPay('gcash'),
-        ),
-        const SizedBox(height: 10),
-        _MethodTile(
-          icon: '🔲', label: 'QRPH',
-          sub: 'Scan any PH bank QR code',
-          onTap: () => onPay('qrph'),
-        ),
-        
-        // Simulation buttons for testing
-        if (sessionId != null) ...[
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 10),
-          Text('Testing Options',
-              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _simulatePayment(context, sessionId!, true),
-                icon: const Icon(Icons.check_circle, size: 16),
-                label: Text('Simulate Success', style: GoogleFonts.poppins(fontSize: 12)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _simulatePayment(context, sessionId!, false),
-                icon: const Icon(Icons.cancel, size: 16),
-                label: Text('Simulate Failure', style: GoogleFonts.poppins(fontSize: 12)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-              ),
-            ),
-          ]),
-        ],
-      ]),
+      ),
     );
   }
 
-  void _simulatePayment(BuildContext context, String sessionId, bool success) async {
+  void _simulatePayment(
+      BuildContext context, String sessionId, bool success) async {
     try {
-      final result = success 
+      final result = success
           ? await ApiService.simulatePaymentSuccess(sessionId)
           : await ApiService.simulatePaymentFailure(sessionId);
-      
+
       if (!context.mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(result['message'] ?? 'Simulation complete'),
-        backgroundColor: result['success'] == true ? Colors.green : Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ));
-      
-      // Close the payment sheet after simulation
+
+      showHarayaSnackBar(
+        context,
+        result['message'] ?? 'Simulation complete',
+        isError: result['success'] != true,
+      );
+
       Navigator.pop(context);
-      
-      // If successful, also call payment success handler to ensure proper processing
+
       if (result['success'] == true && success) {
         try {
-          final successResult = await ApiService.handlePaymentSuccess(sessionId, userId: userId);
+          final successResult =
+              await ApiService.handlePaymentSuccess(sessionId, userId: userId);
           if (successResult['success'] == true) {
             showSnack('Payment completed successfully! Stock deducted.');
-            // Navigate to orders after a short delay
             Future.delayed(const Duration(seconds: 1), () {
               if (context.mounted) {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => OrdersScreen(user: user)),
+                  MaterialPageRoute(
+                      builder: (_) => OrdersScreen(user: user)),
                 );
               }
             });
           }
         } catch (e) {
-          showSnack('Payment processed but notification failed: $e', isError: true);
+          showSnack('Payment processed but notification failed: $e',
+              isError: true);
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Simulation error: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ));
+        showHarayaSnackBar(context, 'Simulation error: $e', isError: true);
       }
     }
   }
 }
 
-class _MethodTile extends StatelessWidget {
-  final String icon, label, sub;
-  final VoidCallback onTap;
-  const _MethodTile({required this.icon, required this.label, required this.sub, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade200),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(children: [
-            Text(icon, style: const TextStyle(fontSize: 28)),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
-              Text(sub,   style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
-            ])),
-            const Icon(Icons.chevron_right, color: Colors.grey),
-          ]),
-        ),
-      );
-}
-
 // ── Reusable guest-prompt dialog ───────────────────────────────────────────────
-
 Future<void> showLoginPrompt(BuildContext context) async {
   return showDialog(
     context: context,
     builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Text('Sign In Required',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
-      content: Text('You need to be logged in to add items to your cart or purchase.',
-          style: GoogleFonts.poppins(fontSize: 13)),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(HarayaRadius.xl)),
+      icon: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: HarayaColors.primary.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.lock_outline_rounded,
+            color: HarayaColors.primary, size: 28),
+      ),
+      title: Text(
+        'Sign In Required',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        textAlign: TextAlign.center,
+      ),
+      content: Text(
+        'You need to be logged in to add items to your cart or make a purchase.',
+        style: GoogleFonts.poppins(fontSize: 13, color: HarayaColors.textMuted),
+        textAlign: TextAlign.center,
+      ),
+      actionsAlignment: MainAxisAlignment.center,
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.poppins(color: HarayaColors.textMuted),
+          ),
         ),
         ElevatedButton(
           onPressed: () {
             Navigator.pop(context);
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()));
           },
           child: Text('Sign In', style: GoogleFonts.poppins()),
         ),

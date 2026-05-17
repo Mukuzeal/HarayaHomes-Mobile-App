@@ -265,6 +265,48 @@ class ApiService {
     }
   }
 
+  // ── DIRECT CARD CHARGE (PayMongo Payment Intent, in-app) ──────────────────
+  static Future<Map<String, dynamic>> directCharge({
+    required int userId,
+    List<int>? cartIds,
+    int? productId,
+    int quantity = 1,
+    required String cardNumber,
+    required int expMonth,
+    required int expYear,
+    required String cvc,
+    required String cardName,
+  }) async {
+    const url = '$baseUrl/api/payment/direct-charge';
+    _log('Payment', 'POST → $url');
+    try {
+      final headers = await _getHeaders();
+      final Map<String, dynamic> bodyMap = {
+        'user_id': userId,
+        'card_number': cardNumber.replaceAll(' ', ''),
+        'exp_month': expMonth,
+        'exp_year': expYear,
+        'cvc': cvc,
+        'card_name': cardName,
+      };
+      if (cartIds != null) bodyMap['cart_ids'] = cartIds;
+      if (productId != null) {
+        bodyMap['product_id'] = productId;
+        bodyMap['quantity'] = quantity;
+      }
+      final response = await http.post(Uri.parse(url), headers: headers, body: jsonEncode(bodyMap))
+          .timeout(const Duration(seconds: 30));
+      _log('Payment', 'DirectCharge status: ${response.statusCode}');
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        _logError('Payment', 'DirectCharge error body: ${response.body}');
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      _logError('Payment', 'directCharge error: $e');
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
   // ── GET ORDERS ──────────────────────────────────────────────────────────────
   static Future<List<dynamic>> getOrders(int userId) async {
     final url = '$baseUrl/api/orders/$userId';
